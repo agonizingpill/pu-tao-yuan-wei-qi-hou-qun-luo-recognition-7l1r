@@ -46,11 +46,12 @@ async function render(message='') {
       const history = block ? await api(`/blocks/${block.id}/samples`) : [];
       body = blockPage(blocks, block, history, editable);
     } else if (page === 'clusters') {
-      const [runs, labels] = await Promise.all([api('/runs'),api('/labels')]);
+      const [runs, labels, blocks, standards] = await Promise.all(
+        [api('/runs'), api('/labels'), api('/blocks'), api('/standards')]);
       const id = runs.find(r => r.id === state.run)?.id || runs[0]?.id;
       const run = id ? await api(`/runs/${id}`) : null;
       queued = run?.status === 'queued';
-      body = clusterPage(runs, run, labels, editable, supervisor);
+      body = clusterPage(runs, run, labels, blocks, standards, editable, supervisor);
     } else if (page === 'irrigation') {
       const [blocks, rounds] = await Promise.all([api('/blocks'),api('/rounds')]);
       body = irrigationPage(blocks, rounds, rounds.find(r => r.id === state.round), editable, supervisor);
@@ -103,7 +104,13 @@ async function mutate(action, data, id) {
     }
     case 'decision':
       await api(`/runs/${id}/decision`, {...data, approve:data.approve==='true'});
-      return data.approve === 'true' ? '已发布标签，请到灌溉轮次处理待改排时段。' : '已退回候选标签。';
+      return data.approve === 'true' ? '已签发群名并发布标签，请到灌溉轮次处理待改排时段。' : '已退回候选标签。';
+    case 'naming-retry':
+      await api(`/runs/${id}/naming/retry`,{});
+      return '已撤下待签群名，按原拟合重判。';
+    case 'standards':
+      await api('/standards', numeric(data,'cool_block_id','warm_block_id'));
+      return '已保存田间标准地。';
     case 'retry':
       await api(`/runs/${id}/retry`,{});
       return '原采样快照已重新入队。';

@@ -127,10 +127,29 @@ def runs(_user=readable):
         ''').fetchall()
 
 
+@app.get('/standards')
+def standards(_user=readable):
+    with connect() as db:
+        return clusters.standards_view(db)
+
+
+@app.post('/standards')
+def set_standards(data: schemas.StandardsInput, user=supervised):
+    with connect() as db:
+        lock_ledger(db)
+        return clusters.set_standards(db, data.cool_block_id, data.warm_block_id, user['name'])
+
+
 @app.get('/runs/{run_id}')
 def run_detail(run_id: int, _user=readable):
     with connect() as db:
         return clusters.run_detail(db, run_id)
+
+
+@app.get('/runs/{run_id}/standards')
+def run_standards(run_id: int, _user=readable):
+    with connect() as db:
+        return clusters.run_standards(db, run_id)
 
 
 @app.get('/runs/{run_id}/evidence')
@@ -165,7 +184,14 @@ def create_run(data: schemas.RunInput, user=editable):
 def decide(run_id: int, data: schemas.DecisionInput, user=supervised):
     with connect() as db:
         lock_ledger(db)
-        return clusters.decide(db, run_id, data.approve, data.reason, user['name'])
+        return clusters.decide(db, run_id, data.approve, data.reason, user['name'], data.token)
+
+
+@app.post('/runs/{run_id}/naming/retry')
+def retry_naming(run_id: int, user=supervised):
+    with connect() as db:
+        lock_ledger(db)
+        return clusters.retry_naming(db, run_id, user['name'])
 
 
 @app.post('/runs/{run_id}/retry', status_code=202)

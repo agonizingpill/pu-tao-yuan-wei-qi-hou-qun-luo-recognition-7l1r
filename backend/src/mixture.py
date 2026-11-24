@@ -31,13 +31,30 @@ def fit_profiles(snapshot):
     order = np.argsort(model.means_ @ np.array([1, 1, -1, -1]), kind='stable')
     profile_order = {1: [Profile.BALANCED], 2: [Profile.COOL, Profile.WARM],
                      3: [Profile.COOL, Profile.BALANCED, Profile.WARM]}[model.n_components]
-    names = dict(zip(order, profile_order))
+    provisional = {int(index): profile_order[rank] for rank, index in enumerate(order)}
     posterior = model.predict_proba(matrix)
+    components = [{
+        'index': index,
+        'provisional_profile': provisional[index].value,
+        'centroid': dict(zip(FEATURES, (float(value) for value in centroids[index]))),
+    } for index in range(model.n_components)]
+    memberships = []
+    for item, probabilities in zip(snapshot, posterior):
+        component = int(np.argmax(probabilities))
+        memberships.append({
+            'block_id': int(item['block_id']), 'code': item['code'],
+            'component': component, 'confidence': float(max(probabilities)),
+            'probabilities': [float(value) for value in probabilities],
+        })
     return {
         'chosen_k': model.n_components, 'bic': scores, 'seed': SEED,
         'covariance_type': 'diag', 'reg_covar': REG_COVAR, 'n_init': 10, 'features': FEATURES,
-        'centroids': {names[i]: dict(zip(FEATURES, row.tolist())) for i, row in enumerate(centroids)},
+        'centroids': {provisional[index].value: dict(zip(FEATURES, (float(value) for value in row)))
+                      for index, row in enumerate(centroids)},
+        'components': components,
+        'memberships': memberships,
         'assignments': [dict(block_id=item['block_id'], code=item['code'],
-                             profile=names[int(np.argmax(p))], confidence=float(max(p)))
+                             profile=provisional[int(np.argmax(p))].value,
+                             confidence=float(max(p)))
                         for item, p in zip(snapshot, posterior)],
     }

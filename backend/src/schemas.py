@@ -51,9 +51,15 @@ class RunInput(Input):
     window_end: date
 
 
+class StandardsInput(Input):
+    cool_block_id: int = Field(gt=0)
+    warm_block_id: int = Field(gt=0)
+
+
 class DecisionInput(Input):
     approve: bool
     reason: Narrative
+    token: Annotated[str, StringConstraints(pattern=r'^[0-9a-f]{64}$')] | None = None
 
 
 class ScheduleInput(Input):

@@ -31,7 +31,7 @@ def consume_one():
         with connect() as db:
             row = db.execute('''
                 SELECT jsonb_build_object('id',id,'window_end',window_end,'digest',digest,
-                    'snapshot',snapshot,'result',result)::text AS payload
+                    'snapshot',snapshot,'result',result,'naming',naming)::text AS payload
                 FROM climate_run WHERE id=%s
             ''', (run_id,)).fetchone()
         EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
